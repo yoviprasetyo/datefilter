@@ -1,18 +1,193 @@
 <?php
 
-class datefilter {
+class DateFilter {
 
-	public function filterdate($date){
-		$separator = $this->checkseparator($date);
-		$hasil = $this->format($separator,$date);
+	// Array contain month's name
+	$_month = array();
+
+	/*
+	The output format
+
+	Type 1 = YYYY {delimiter} MM {delimiter} DD
+	Type 2 = DD {delimiter} MM {delimiter} YYYY
+	Type 3 = MM {delimiter} DD {delimiter} YYYY
+	*/
+	private $_out_format;
+
+	/* 
+	The default value of the delimiter
+	Type 1 = space
+	Type 2 = slash
+	Type 3 = hyphen
+	*/
+
+	//	- in delimiter
+	private $_in_delimiter = array();
+
+	// - out delimiter
+	private $_out_delimiter = array();
+
+	// Flag to detect the input and output just month and year
+	private $_month_year = 0;
+
+	// Flag to detect the input and output just date and month
+	private $_date_month = 0;
+
+	// The data that inputted
+	private $_unformated_date;
+
+	// Data after the separation process
+	private $_unassemble_date = array();
+
+	// The data that will be show
+	private $_formated_date;
+
+
+	public function __construct() {
+		$this->set_month();
+	}
+
+	private function set_month($month = array('january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december')) {
+		$this->_month = $month;
+		return $this;
+	}
+
+	private function set_unformated_date($date) {
+		$this->_unformated_date = $date;
+	}
+
+	private function get_delimiter_type($type) {
+		switch ($type) {
+			case 1:
+				$delimiter = ' ';
+				break;
+			case 2:
+				$delimiter = '/';
+				break;
+			case 3:
+				$delimiter = '-';
+				break;
+			default:
+				$delimiter = ' ';
+				break;
+		}
+		return $delimiter;
+	}
+
+	private function set_in_delimiter($type, $index) {
+		if(is_numeric($type)) {
+			$delimiter = $this->get_delimiter_type($type);
+		} else {
+			$delimiter = $type;
+		}
+		$this->_in_delimiter[$index] = $delimiter;
+		return $this;
+	}
+
+	private function set_out_delimiter($type, $index) {
+		if(is_numeric($type)) {
+			$delimiter = $this->get_delimiter_type($type);
+		} else {
+			$delimiter = $type;
+		}
+		$this->_out_delimiter[$index] = $delimiter;
+		return $this;
+	}
+
+	private function set_all_in_delimiter($type = 1) {
+		$this->set_in_delimiter($type, 0)->set_in_delimiter($type, 1);
+		return $this;
+	}
+
+	private function set_all_out_delimiter($type = 2) {
+		$this->set_out_delimiter($type, 0)->set_out_delimiter($type, 1);
+		return $this;
+	}
+
+	private function set_out_format($type = 1) {
+		if($type < 1 OR $type > 3) {
+			$out_format = 1;
+		} else {
+			$out_format = $type;
+		}
+		$this->_out_format = $out_format;
+		return $this;
+	}
+
+	private function set_month_year() {
+		$this->_month_year = 1;
+		return $this;
+	}
+
+	private function set_date_month() {
+		$this->_date_month = 1;
+		return $this;
+	}
+
+	private function check_delimiter($string) {
+		if(strpos($string,' ') !== false ){
+			$delimiter = 1;
+		} else if(strpos($string, '/') !== false){
+			$delimiter = 2;
+		} else if(strpos($string, '-') !== false){
+			$delimiter = 3;
+		} else {
+			$delimiter = false;
+		}
+		return $delimiter;
+	}
+
+	private function separate() {
+		if($this->_unformated_date !== null) {
+			if(count($this->_in_delimiter) > 1) {
+				if($this->_in_delimiter[0] === $this->_in_delimiter[1]) {
+					$value = explode($this->_in_delimiter[0], $this->_unformated_date);
+				} else {
+					$exp_ = explode($this->_in_delimiter[0], $this->_unformated_date);
+					$value[0] = $exp_[0];
+					$exp_next_ = explode($this->_in_delimiter[1], $exp_[1]);
+					$value[1] = $exp_next_[0];
+					$value[2] = $exp_next_[1];
+				}
+			} else {
+				$value = explode($this->_in_delimiter[0], $this->_unformated_date);
+			}
+		} else {
+			$value = false;
+		}
+		$this->_unassemble_date = $value;
+	}
+
+	private function do_format() {
+
+	}
+
+	private function assemble() {
+		$string_out = null;
+		foreach ($this->_unassemble_date as $key => $value) {
+			if($key !== 0) {
+				$key_delimiter = $key - 1;
+				$string_out .= $this->_out_delimiter[$key_delimiter];
+			}
+			$string_out .= $value;
+		}
+		return $string_out;
+	}
+
+	public function filterdate($date, $format = 1, $out = 2, $in = null) {
+		if($in === null) {
+			$delimiter = $this->check_delimiter($date);
+		}
+		
+		$hasil = $this->format($delimiter,$date);
 		return $hasil;
 	}
-	private function format($separator,$string){
-		if($separator == 'slash'){
+	private function format($delimiter,$string){
+		if($delimiter == 'slash'){
 			$hasil = $this->doformat('/',$string);
-		} else if($separator == 'strip'){
+		} else if($delimiter == 'hyphen'){
 			$hasil = $this->doformat('-',$string);
-		} else if($separator == 'spasi'){
+		} else if($delimiter == 'space'){
 			$hasil = $this->doformat(' ',$string);
 		}
 		return $hasil;
@@ -103,14 +278,6 @@ class datefilter {
 			return 12;
 		}
 	}
-	private function checkseparator($string){
-		if(strpos($string,' ') !== false ){
-			return 'spasi';
-		} else if(strpos($string, '/') !== false){
-			return 'slash';
-		} else if(strpos($string, '-') !== false){
-			return 'strip';
-		}
-	}
+	
 
 }
